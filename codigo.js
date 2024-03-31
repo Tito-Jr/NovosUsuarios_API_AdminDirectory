@@ -62,40 +62,52 @@ function addUsuario() {
   console.log('Usuário criado: ');
 }
 
-
 function exportarBase( ){
 
   if( sheetGerir.getLastRow() >= 2){
     sheetGerir.getRange(2,1,sheetGerir.getLastRow() - 1, 20).clearContent();
   }
 
-  var parametros = {
-    "domain" : "etegravata.com.br",
-    "orderBy": "givenName",
-    "maxResults": 1,
-    "pagetoken": "pagetoken"
-  };
-
-  let pageToken;
+  let pageToken = '';
   let page;
   var listaUsuarios = [];
-  var usuarioInfo = AdminDirectory.Users.list(parametros).users;
 
-  usuarioInfo.forEach( usuarioInfo => {
-    var nome = usuarioInfo.name.fullName;
-    var email = usuarioInfo.primaryEmail;
-    var uniOrganizacional = usuarioInfo.orgUnitPath;
-    var emailRecuperacao = usuarioInfo.recoveryEmail;
-    var emailSecundario = usuarioInfo.emails[0].address ;
-    var id = usuarioInfo.externalIds[0].value;
-    listaUsuarios.push([nome, email, uniOrganizacional, emailRecuperacao, emailSecundario, id]);
-    pageToken = page.nextPageToken;
-  })
+  do {
+    var parametros = {
+      "domain" : "etegravata.com.br",
+      "orderBy": "givenName",
+      "maxResults": 500,
+      "pageToken": pageToken
+    };
+     
+    page = AdminDirectory.Users.list(parametros);
 
-  sheetGerir.getRange(2,1,listaUsuarios.length,listaUsuarios[0].length).setValues(listaUsuarios);
-  console.log(listaUsuarios);
+    const usuariosInfo = page.users;
+    if (!usuariosInfo) {
+      console.log("No users found.");
+      return;
+    }
+
+    for (const usuarioInfo of usuariosInfo) {
+      var nome = usuarioInfo.name.fullName;
+      var email = usuarioInfo.primaryEmail;
+      var uniOrganizacional = usuarioInfo.orgUnitPath;
+      var emailRecuperacao = usuarioInfo.recoveryEmail;
+      var emailSecundario = usuarioInfo.emails[0].address;
+      if (usuarioInfo.externalIds !== undefined) {
+        var id = usuarioInfo.externalIds[0].value;
+      }
+      else {
+        id = "";
+      }
+      listaUsuarios.push([nome, email, uniOrganizacional, emailRecuperacao, emailSecundario, id]);
+    }
+
+    pageToken = page.nextPageToken ||'';
+    
+  } while (pageToken);
 }
-
+  
 function listAllUsers() {
   let pageToken;
   let page;
@@ -118,48 +130,6 @@ function listAllUsers() {
     pageToken = page.nextPageToken;
   } while (pageToken);
 }
-
-
-
-
-/*function exportarBase() {
-  var parametros = {
-    "domain": 'etegravata.com.br',
-    "orderBy": 'givenName',
-    "maxResults": 2
-  };
-
-  var listaUsuarios = [];
-
-  var nextPageToken = ''; // Variável para armazenar o token da próxima página
-
-  do {
-    parametros.pageToken = nextPageToken; // Adicionando o token da próxima página aos parâmetros
-
-    var usuarioInfo = AdminDirectory.Users.list(parametros);
-    var users = usuarioInfo.users;
-    nextPageToken = usuarioInfo.nextPageToken; // Atualizando o token da próxima página
-
-    users.forEach(usuarioInfo => {
-      var nome = usuarioInfo.name.givenName;
-      var sobreNome = usuarioInfo.name.familyName;
-      var email = usuarioInfo.primaryEmail;
-      var senha = "Senha não disponível"; // Senha não pode ser obtida diretamente via API
-      var uniOrganizacional = usuarioInfo.orgUnitPath;
-      listaUsuarios.push([nome, sobreNome, email, senha, uniOrganizacional]);
-    });
-
-  } while (nextPageToken); // Continua o loop até que não haja mais páginas
-
-  // Limpando o conteúdo da planilha antes de inserir os novos dados
-  if (sheetGerir.getLastRow() >= 2) {
-    sheetGerir.getRange(2, 1, sheetGerir.getLastRow() - 1, 8).clearContent();
-  }
-
-  // Inserindo os dados na planilha
-  sheetGerir.getRange(2, 1, listaUsuarios.length, listaUsuarios[0].length).setValues(listaUsuarios);
-  
-}*/
 
 
 // Função para formatar a base de usuários e gerar os emails 
@@ -259,5 +229,5 @@ function formatarNomes() {
 
   // Escrever emails na coluna C da aba 'Base tratada'
   abaResultados.getRange('C2:C' + (emails.length + 1)).setValues(emails);
-
+  
 }
